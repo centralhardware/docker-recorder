@@ -48,6 +48,7 @@ ENV TZ="UTC"
 
 COPY recorder.conf /config/recorder.conf
 COPY JSON.lua /config/JSON.lua
+COPY send-to-bot.lua /script/send-to-bot.lua
 
 COPY --from=builder /app /
 
