@@ -47,6 +47,8 @@ function otr_hook(topic, _type, data)
                         '"bssid":"'     .. escape_json(data['bssid']) .. '",' ..
                         '"ssid":"'      .. escape_json(data['ssid']) .. '",' ..
                         '"vel":'        .. escape_json_number(data['vel']) .. ',' ..
+                        '"cog":'        .. escape_json_number(data['cog']) .. ',' ..
+                        '"m":'          .. escape_json_number(data['m']) .. ',' ..
                         '"bs":'         .. escape_json_number(data['bs']) ..
                         '}'
 
