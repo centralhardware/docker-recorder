@@ -22,6 +22,11 @@ RUN apk add --no-cache \
 RUN git clone --branch=${RECORDER_VERSION} https://github.com/owntracks/recorder /src/recorder
 WORKDIR /src/recorder
 
+# Reject an HTTP location (503, so the phone retries) when reverse geocoding fails,
+# instead of storing it and forwarding it to the bot without a country.
+COPY revgeo-required.patch .
+RUN git apply revgeo-required.patch
+
 COPY config.mk .
 RUN make -j $(nprocs)
 RUN make install DESTDIR=/app
