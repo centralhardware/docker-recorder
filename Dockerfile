@@ -1,4 +1,4 @@
-FROM alpine:3.24 AS builder
+FROM alpine:3.24.2 AS builder
 
 ARG RECORDER_VERSION=1.0.4
 # ARG RECORDER_VERSION=master
@@ -31,7 +31,7 @@ COPY config.mk .
 RUN make
 RUN make install DESTDIR=/app
 
-FROM alpine:3.24
+FROM alpine:3.24.2
 
 ENV DOCKER_RUNNING=1
 
