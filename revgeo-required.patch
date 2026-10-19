@@ -1,0 +1,72 @@
+diff --git a/http.c b/http.c
+index a81ffb7..a78dfb4 100644
+--- a/http.c
++++ b/http.c
+@@ -629,6 +629,8 @@ char *j_encrypt(struct udata *ud, JsonNode *json, char *userdevice)
+  * to do the needful. :)
+  */
+ 
++extern int revgeo_failed;	/* recorder.c */
++
+ static int dopublish(struct mg_connection *conn, const char *uri)
+ {
+ 	struct udata *ud = (struct udata *)conn->server_param;
+@@ -664,6 +666,16 @@ static int dopublish(struct mg_connection *conn, const char *uri)
+ 
+ 	handle_message(ud, UB(topic), payload, conn->content_len, 0, TRUE, FALSE, &jnode);
+ 
++	if (revgeo_failed) {
++		free(payload);
++		free(u);
++		free(d);
++		if (jnode != NULL) {
++			json_delete(jnode);
++		}
++		return send_status(conn, 503, "reverse geocoding failed");
++	}
++
+ 
+ 	jarray = populate_friends(conn, u, d);
+ 	extra_http_json(jarray, u, d);
+diff --git a/recorder.c b/recorder.c
+index 4481c71..cc9a4ee 100644
+--- a/recorder.c
++++ b/recorder.c
+@@ -735,6 +735,14 @@ static bool is_newer_than_last(JsonNode *json)
+  * when it returns the payload to the client.
+  */
+ 
++/*
++ * Set by handle_message() when an HTTP location could not be reverse-geocoded
++ * (no country from the lookup or the cache). The location is then neither
++ * stored nor handed to the hooks, and the HTTP handler answers 503 so the
++ * phone keeps the point and sends it again later.
++ */
++int revgeo_failed = FALSE;
++
+ void handle_message(void *userdata, char *topic, char *payload, size_t payloadlen, int retain, int httpmode, int was_encrypted, JsonNode **jnode)
+ {
+ 	JsonNode *json, *j, *geo = NULL;
+@@ -753,6 +761,8 @@ void handle_message(void *userdata, char *topic, char *payload, size_t payloadle
+ 	int r_ok = TRUE;			/* True if recording enabled for a publish */
+ 	payload_type _type;
+ 
++	revgeo_failed = FALSE;
++
+ 	/*
+ 	 * mosquitto_message->
+ 	 * 	 int mid;
+@@ -1185,6 +1195,13 @@ void handle_message(void *userdata, char *topic, char *payload, size_t payloadle
+ 		utstring_printf(addr, "n.a.");
+ 	}
+ 
++	if (httpmode && _type == T_LOCATION && !pingping && ud->revgeo == TRUE && geoprec > 0 &&
++	    geo == NULL && utstring_len(cc) == 0 && json_find_member(json, "cc") == NULL) {
++		olog(LOG_ERR, "Reverse geocoding failed for %s; rejecting so the client retries", UB(ghash));
++		revgeo_failed = TRUE;
++		goto cleanup;
++	}
++
+ 
+ 	if (httpmode) {
+ 		json_append_member(json, "_http", json_mkbool(1));
